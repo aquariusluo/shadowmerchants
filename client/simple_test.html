@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FHE Sepolia Test</title>
+</head>
+<body>
+    <h1>Testing FHE on Sepolia</h1>
+    <div id="result">Loading...</div>
+    <script type="module">
+        import { createInstance } from 'https://cdn.jsdelivr.net/npm/fhevmjs@0.6.2/+esm';
+        
+        (async () => {
+            try {
+                console.log('🔐 Attempting to create FHE instance for Sepolia (chainId 11155111)...');
+                
+                const instance = await createInstance({
+                    chainId: 11155111,
+                });
+                
+                console.log('✅ FHE instance created successfully');
+                document.getElementById('result').innerHTML = '<p style="color: green;">✅ FHE instance created for Sepolia</p>';
+            } catch (err) {
+                console.error('❌ Error:', err.message);
+                document.getElementById('result').innerHTML = `<p style="color: red;">❌ Error: ${err.message}</p>`;
+            }
+        })();
+    </script>
+</body>
+</html>

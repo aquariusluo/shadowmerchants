@@ -1,0 +1,22 @@
+{
+  "name": "fhe-game-server",
+  "version": "1.0.0",
+  "description": "Backend API for FHEVM encryption",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.ts",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@zama-fhe/relayer-sdk": "^0.2.0",
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.17",
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.0"
+  }
+}
