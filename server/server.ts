@@ -35,8 +35,10 @@ let initializationPromise: Promise<void> | null = null;
  * Set MOCK_MODE=true to use mock encryption (generates valid hex, empty proofs)
  * The contract will accept these in plaintext fallback mode
  * This allows testing: Gateway → Coprocessor → Results (Steps 2-5)
+ *
+ * Production: Disable MOCK_MODE to use REAL FHEVM encryption from Zama Relayer
  */
-const MOCK_MODE = process.env.MOCK_MODE === "true" || true; // Enabled by default during Relayer outage
+const MOCK_MODE = process.env.MOCK_MODE === "true" || false; // Disabled - Using REAL FHEVM
 const MOCK_MODE_ENABLED_MSG =
   "ℹ️  Mock Mode Active: Using plaintext values for Relayer compatibility testing";
 
