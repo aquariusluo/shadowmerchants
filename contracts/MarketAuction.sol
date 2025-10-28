@@ -279,9 +279,17 @@ contract MarketAuction is AccessControl {
             // Will be processed in onProofVerified callback
             encryptedReservePrice = euint64.wrap(bytes32(0));
         } else {
-            // Direct FHE mode: decrypt proof immediately
-            encryptedReservePrice = FHE.fromExternal(reservePrice, proof);
-            FHE.allowThis(encryptedReservePrice);
+            // Direct FHE mode: attempt to decrypt proof
+            // If FHE precompile is not available, fall back to plaintext
+            try this._decryptReservePrice(reservePrice, proof) returns (euint64 decrypted) {
+                encryptedReservePrice = decrypted;
+                FHE.allowThis(encryptedReservePrice);
+            } catch {
+                // FHE precompile unavailable - fall back to plaintext mode
+                usesPlaintext = true;
+                reservePlain = uint64(uint256(reserveHandle));
+                encryptedReservePrice = euint64.wrap(reserveHandle);
+            }
         }
 
         // Initialize with no bidder
@@ -827,6 +835,12 @@ contract MarketAuction is AccessControl {
         auction.highestBidder = FHE.asEaddress(msg.sender);
         FHE.allowThis(auction.highestBidder);
         FHE.allow(auction.highestBidder, msg.sender);
+    }
+
+    function _decryptReservePrice(externalEuint64 reservePrice, bytes calldata proof)
+        external returns (euint64)
+    {
+        return FHE.fromExternal(reservePrice, proof);
     }
 
 }

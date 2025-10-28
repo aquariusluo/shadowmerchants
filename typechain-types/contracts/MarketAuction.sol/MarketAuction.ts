@@ -35,6 +35,7 @@ export interface MarketAuctionInterface extends Interface {
       | "GOOD_TYPE_SILK"
       | "GOOD_TYPE_SPICES"
       | "MAX_SIMULTANEOUS_AUCTIONS"
+      | "_decryptReservePrice"
       | "activeAuctionCount"
       | "auctionCounter"
       | "auctionParticipants"
@@ -117,6 +118,10 @@ export interface MarketAuctionInterface extends Interface {
   encodeFunctionData(
     functionFragment: "MAX_SIMULTANEOUS_AUCTIONS",
     values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "_decryptReservePrice",
+    values: [BytesLike, BytesLike]
   ): string;
   encodeFunctionData(
     functionFragment: "activeAuctionCount",
@@ -277,6 +282,10 @@ export interface MarketAuctionInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "MAX_SIMULTANEOUS_AUCTIONS",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "_decryptReservePrice",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -672,6 +681,12 @@ export interface MarketAuction extends BaseContract {
 
   MAX_SIMULTANEOUS_AUCTIONS: TypedContractMethod<[], [bigint], "view">;
 
+  _decryptReservePrice: TypedContractMethod<
+    [reservePrice: BytesLike, proof: BytesLike],
+    [string],
+    "nonpayable"
+  >;
+
   activeAuctionCount: TypedContractMethod<[], [bigint], "view">;
 
   auctionCounter: TypedContractMethod<[], [bigint], "view">;
@@ -936,6 +951,13 @@ export interface MarketAuction extends BaseContract {
   getFunction(
     nameOrSignature: "MAX_SIMULTANEOUS_AUCTIONS"
   ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "_decryptReservePrice"
+  ): TypedContractMethod<
+    [reservePrice: BytesLike, proof: BytesLike],
+    [string],
+    "nonpayable"
+  >;
   getFunction(
     nameOrSignature: "activeAuctionCount"
   ): TypedContractMethod<[], [bigint], "view">;

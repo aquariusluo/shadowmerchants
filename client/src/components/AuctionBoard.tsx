@@ -358,10 +358,10 @@ export const AuctionBoard: React.FC = () => {
     }
   };
 
-  // Handle resolve auction (admin only)
+  // Handle resolve auction (admin only) - OPTIMIZED RETRY APPROACH
   const handleResolveAuction = async (auctionId: string) => {
-    if (!marketAuctionContract) {
-      alert('Contract not ready');
+    if (!marketAuctionContract || !provider) {
+      alert('Contract or provider not ready');
       return;
     }
 
@@ -369,7 +369,7 @@ export const AuctionBoard: React.FC = () => {
       setResolving({ ...resolving, [auctionId]: true });
       console.log('⏳ Resolving auction', auctionId);
 
-      // Find the auction to check its end time
+      // Step 1: Calculate wait time based on auction expiry
       const auction = auctions.find(a => a.auctionId === auctionId);
       if (auction) {
         const now = Math.floor(Date.now() / 1000);
@@ -377,38 +377,90 @@ export const AuctionBoard: React.FC = () => {
         console.log(`⏱️ Time until expiry: ${timeUntilExpiry}s`);
 
         if (timeUntilExpiry > 0) {
-          const waitTime = (timeUntilExpiry + 2) * 1000; // Add 2 second buffer
+          const waitTime = (timeUntilExpiry + 5) * 1000; // Add 5 second buffer
           console.log(`⏳ Waiting ${waitTime / 1000}s for auction to expire...`);
           await new Promise(resolve => setTimeout(resolve, waitTime));
+        } else {
+          // Auction expired locally, add minimal delay
+          console.log('⏳ Auction expired locally, checking RPC sync...');
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
 
-      const tx = await marketAuctionContract.resolveAuction(auctionId);
-      console.log('✅ Resolve transaction sent:', tx.hash);
-      await tx.wait();
+      // Step 2: OPTIMIZED RETRY WITH EXPONENTIAL BACKOFF + RPC DETECTION
+      let retries = 0;
+      const maxRetries = 6; // Increased from 3 to 6
+      let lastError: any = null;
+      const backoffDelays = [2000, 4000, 8000, 12000, 15000, 20000]; // Exponential: 2s, 4s, 8s, 12s, 15s, 20s
+      let lastBlockNumber = 0;
 
-      alert('✅ Auction resolved!');
-      console.log('✅ Auction #' + auctionId + ' resolved successfully');
+      while (retries <= maxRetries) {
+        try {
+          // Check current block number to detect RPC lag
+          const currentBlock = await provider.getBlockNumber();
+          const blockProgressed = currentBlock > lastBlockNumber;
+          lastBlockNumber = currentBlock;
 
-      // Refresh auctions and wins to show updated status
-      await fetchAuctions();
-      await fetchMyWins();
+          console.log(
+            `📤 Attempt ${retries + 1}/${maxRetries + 1}: Sending resolve transaction... ` +
+            `(Block: ${currentBlock}${blockProgressed ? ' ✓' : ' [STALE]'})`
+          );
+
+          const tx = await marketAuctionContract.resolveAuction(auctionId);
+          console.log('✅ Resolve transaction sent:', tx.hash);
+          await tx.wait();
+
+          alert('✅ Auction resolved!');
+          console.log('✅ Auction #' + auctionId + ' resolved successfully');
+
+          // Refresh UI
+          await fetchAuctions();
+          await fetchMyWins();
+          return; // Success!
+        } catch (err: any) {
+          lastError = err;
+
+          // Check if it's RPC stale data error
+          if (err.message.includes('AuctionNotExpired') || err.code === 'CALL_EXCEPTION') {
+            retries++;
+            if (retries <= maxRetries) {
+              const delay = backoffDelays[retries - 1] || 20000;
+              console.warn(
+                `⚠️ RPC lag detected. Retry ${retries}/${maxRetries + 1} in ${delay / 1000}s...`
+              );
+              await new Promise(resolve => setTimeout(resolve, delay));
+            } else {
+              // Final attempt failed
+              throw lastError;
+            }
+          } else {
+            // Non-recoverable error, fail immediately
+            throw err;
+          }
+        }
+      }
+
+      throw lastError;
     } catch (err: any) {
       console.error('❌ Resolve error:', err);
 
-      // Provide more specific error messages
+      // Classify and explain the error
       let errorMessage = err.message;
       if (err.message.includes('AuctionAlreadyResolved')) {
         errorMessage = 'This auction has already been resolved';
-      } else if (err.message.includes('AuctionNotExpired')) {
-        errorMessage = 'Auction has not expired yet. Please wait for the auction to end.';
+      } else if (err.message.includes('AuctionNotExpired') || err.code === 'CALL_EXCEPTION') {
+        errorMessage =
+          '⏰ RPC sync lag detected. All frontend retries exhausted.\n\n' +
+          '💡 Solution: Use CLI command:\n' +
+          'npx hardhat run scripts/resolve-auction.ts --network sepolia\n\n' +
+          'The CLI bypasses RPC lag by running directly from the server.';
       } else if (err.message.includes('NotAuthorized') || err.message.includes('DEFAULT_ADMIN_ROLE')) {
         errorMessage = 'Only administrators can resolve auctions';
       } else if (err.message.includes('AuctionNotFound')) {
         errorMessage = 'Auction not found';
       }
 
-      alert(`❌ Error resolving auction: ${errorMessage}`);
+      alert(`❌ Error resolving auction:\n\n${errorMessage}`);
     } finally {
       setResolving({ ...resolving, [auctionId]: false });
     }
