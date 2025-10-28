@@ -9,9 +9,10 @@ async function main() {
   const chainId = Number(network.chainId);
   console.log(`Network: ${network.name} (Chain ID: ${chainId})`);
 
-  // InputVerification address - using official Zama deployment on Sepolia
-  const inputVerificationAddress = "0x7048C39f048125eDa9d678AEbaDfB22F7900a29F";
-  console.log("Using InputVerification (Official Zama):", inputVerificationAddress);
+  // InputVerification address - use address(0) for direct FHE mode
+  // (Gateway verification requires additional Zama infrastructure setup)
+  const inputVerificationAddress = "0x0000000000000000000000000000000000000000";
+  console.log("Using Direct FHE mode (no gateway verification):", inputVerificationAddress);
 
   // Deploy ShadowMerchants
   const shadowFactory = await ethers.getContractFactory("ShadowMerchants");
@@ -31,16 +32,15 @@ async function main() {
   console.log("DEPLOYMENT SUMMARY");
   console.log("=".repeat(60));
   console.log(`Network: ${network.name} (Chain ID: ${chainId})`);
-  console.log(`InputVerification (Zama): ${inputVerificationAddress}`);
+  console.log(`Mode: Direct FHE (proof decrypted in contract)`);
   console.log(`ShadowMerchants: ${shadowAddress}`);
   console.log(`MarketAuction: ${auctionAddress}`);
   console.log("=".repeat(60));
 
   console.log("\n✅ Successfully deployed to Sepolia with FHEVM support!");
-  console.log("   Using official Zama InputVerification gateway contract");
+  console.log("   Using direct FHE mode - proofs verified immediately");
   console.log("   Relayer: https://relayer.testnet.zama.cloud");
   console.log("   RPC: https://eth-sepolia.public.blastapi.io");
-  console.log("   FHE operations are now enabled!");
 }
 
 main().catch((error) => {
