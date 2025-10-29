@@ -1,4 +1,4 @@
-# FHE Game: Encrypted Auction System on Sepolia
+# FHE Game: Encrypted Auction System - Shadow Merchants
 
 A privacy-preserving auction marketplace leveraging **Zama FHEVM** (Fully Homomorphic Encryption Virtual Machine) for confidential bidding on Ethereum Sepolia testnet.
 
