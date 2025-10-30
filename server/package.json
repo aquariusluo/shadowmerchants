@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "dev": "node server.ts",
-    "start": "node server.js"
+    "start": "node server.js",
+    "proxy": "FRONTEND_URL=http://127.0.0.1:3000 PROXY_PORT=8080 npx ts-node proxy.ts",
+    "proxy:prod": "FRONTEND_URL=http://127.0.0.1:3000 PROXY_PORT=80 npx ts-node proxy.ts"
   },
   "dependencies": {
     "@zama-fhe/relayer-sdk": "^0.2.0",

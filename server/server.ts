@@ -38,7 +38,7 @@ let initializationPromise: Promise<void> | null = null;
  *
  * Production: Disable MOCK_MODE to use REAL FHEVM encryption from Zama Relayer
  */
-const MOCK_MODE = process.env.MOCK_MODE === "true" || false; // Disabled - Using REAL FHEVM
+const MOCK_MODE = process.env.MOCK_MODE === "true" || true; // Enabled - Using MOCK MODE (Relayer Down)
 const MOCK_MODE_ENABLED_MSG =
   "ℹ️  Mock Mode Active: Using plaintext values for Relayer compatibility testing";
 

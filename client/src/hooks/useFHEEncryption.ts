@@ -42,7 +42,7 @@ export const useFHEEncryption = () => {
     }
 
     console.log('🔐 [FHE Hook] Starting FHE initialization...');
-    console.log('   Backend: http://localhost:4000 (Relayer API)');
+    console.log('   Backend: /api (proxied by Vite dev server)');
     setIsLoading(true);
     setError(null);
 
@@ -123,7 +123,10 @@ export const useFHEEncryption = () => {
    */
   const encryptViaBackend = async (value: number | bigint): Promise<EncryptionResult> => {
     try {
-      const response = await fetch('http://localhost:4000/api/encrypt/uint64', {
+      // Use relative URL so Vite proxy can forward to backend
+      // In dev: Vite proxies /api/* to http://localhost:4000
+      // In prod: nginx/proxy handles routing
+      const response = await fetch('/api/encrypt/uint64', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: value.toString() }),

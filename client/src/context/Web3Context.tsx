@@ -223,8 +223,8 @@ export const Web3Provider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const handleChainChanged = (newChainId: string) => {
-      setChainId(parseInt(newChainId, 16));
-      window.location.reload(); // Reload page on chain change
+      const parsedChainId = parseInt(newChainId, 16);
+      setChainId(parsedChainId);
     };
 
     window.ethereum.on('accountsChanged', handleAccountsChanged);
