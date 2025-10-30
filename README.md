@@ -48,8 +48,8 @@ Step 5: User Decryption (Backend/KMS)
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/aquariusluo/fhe-game.git
-cd fhe-game
+git clone https://github.com/aquariusluo/shadowmerchants.git
+cd shadowmerchants
 ```
 
 ### 2. Install Dependencies
@@ -118,14 +118,37 @@ The deployment script will:
 3. Output contract addresses to console
 4. Save addresses to `.env`
 
-### 5. Start Backend Encryption Server
+### 5. Start All Services at Once
 
 ```bash
-cd server
-npx ts-node server.ts
+# From root directory
+npm run start-all
 ```
 
+Or start services individually:
+
+**Backend Encryption Server (Terminal 1):**
+```bash
+cd server
+npm run server
+```
 Server runs on `http://localhost:4000`
+
+**Frontend Application (Terminal 2):**
+```bash
+cd client
+npm run dev
+```
+Frontend runs on `http://localhost:3000`
+
+**Proxy Server (Terminal 3 - if using domain):**
+```bash
+cd server
+npm run proxy:prod
+```
+Proxy runs on `http://localhost:80`
+
+### Backend Encryption Server
 
 **Available endpoints:**
 - `POST /api/encrypt/uint64` - Encrypt a uint64 value
@@ -134,54 +157,184 @@ Server runs on `http://localhost:4000`
 
 When Zama Relayer is operational, the server will use real FHEVM encryption. During outages, set `MOCK_MODE=true` (default) to use plaintext fallback for testing.
 
-### 6. Start Frontend Application
+### Frontend Application
 
-```bash
-cd client
-npm run dev
-```
-
-Frontend runs on `http://localhost:3000`
+Frontend runs on `http://localhost:3000` with:
+- Hot Module Replacement (HMR) enabled
+- MetaMask wallet connection
+- Real-time auction updates
+- Encrypted bid placement
 
 ## Deployment Workflow
 
 ### For Sepolia Testnet
 
+#### Step 1: Setup Environment
+
 1. **Fund wallet with Sepolia ETH**
    - Get testnet ETH from [Sepolia faucet](https://www.sepoliafaucet.com/)
+   - You need ~0.5 ETH for contract deployment
 
-2. **Set private key in `.env`**
+2. **Configure environment variables**
+
+   Create `.env` in root:
    ```bash
+   SEPOLIA_RPC_URL=https://eth-sepolia.public.blastapi.io
    PRIVATE_KEY=your_private_key_hex
+   ETHERSCAN_API_KEY=your_etherscan_key
    ```
 
-3. **Deploy contracts**
+3. **Verify setup**
    ```bash
-   npx hardhat run scripts/deploy.ts --network sepolia
+   npm run compile
    ```
 
-4. **Update contract addresses in `.env` and `client/.env.local`**
+#### Step 2: Deploy Smart Contracts
 
-5. **Start backend server**
-   ```bash
-   cd server && npx ts-node server.ts
-   ```
+```bash
+# Single command to deploy everything
+npx hardhat run scripts/deploy.ts --network sepolia
+```
 
-6. **Start frontend**
-   ```bash
-   cd client && npm run dev
-   ```
+This will:
+- Compile all contracts
+- Deploy `ShadowMerchants` contract
+- Deploy `MarketAuction` contract with gateway support
+- Output contract addresses
+- Save addresses to `.env`
 
-7. **Test on localhost:3000**
-   - Connect MetaMask to Sepolia testnet
-   - Create auctions with encrypted reserve prices
-   - Place encrypted bids
-   - Verify transactions on [Etherscan Sepolia](https://sepolia.etherscan.io)
+**Example output:**
+```
+✓ ShadowMerchants deployed to: 0x1234...
+✓ MarketAuction deployed to: 0x5678...
+✓ Addresses saved to .env
+```
+
+#### Step 3: Verify Deployment (Optional)
+
+```bash
+# Verify contracts on Etherscan
+npx hardhat verify --network sepolia CONTRACT_ADDRESS
+
+# Check auction status
+npx hardhat run scripts/check-auction-status.ts --network sepolia
+```
+
+#### Step 4: Update Configuration
+
+Update `client/.env.local` with deployed contract addresses:
+```bash
+VITE_MARKET_AUCTION_ADDRESS=0x5678...
+VITE_INPUT_VERIFICATION_ADDRESS=0x...
+VITE_CHAIN_ID=11155111
+VITE_RPC_URL=https://eth-sepolia.public.blastapi.io
+```
+
+#### Step 5: Start All Services
+
+```bash
+# Option 1: Start all services at once
+npm run start-all
+
+# Option 2: Start services individually
+# Terminal 1: Backend
+cd server && npm run server
+
+# Terminal 2: Frontend
+cd client && npm run dev
+
+# Terminal 3: Proxy (optional, for domain access)
+cd server && npm run proxy:prod
+```
+
+#### Step 6: Test the Application
+
+1. **Open application**: `http://localhost:3000`
+2. **Connect MetaMask** to Sepolia testnet
+3. **Create an auction**:
+   - Enter good type
+   - Set reserve price (will be encrypted)
+4. **Place encrypted bid**:
+   - View transaction on Etherscan
+   - Verify bid is encrypted
+5. **Wait and resolve**:
+   - After auction expires: `npx hardhat run scripts/resolve-auction.ts --network sepolia`
+   - View winner details
+
+### Additional Deployment Commands
+
+```bash
+# Quick test auction (10 seconds)
+npx hardhat run scripts/create-quick-auction.ts --network sepolia
+
+# Check specific auction
+npx hardhat run scripts/check-auction-status.ts --network sepolia
+
+# Resolve expired auctions
+npx hardhat run scripts/resolve-all-expired.ts --network sepolia
+
+# Emergency auction end
+npx hardhat run scripts/emergency-end-auction.ts --network sepolia
+
+# Test real FHEVM encryption
+npx hardhat run scripts/test-real-fhevm.ts --network sepolia
+
+# Verify transactions
+npx hardhat run scripts/verify-sepolia-transactions.ts --network sepolia
+```
+
+## Recent Updates & Fixes
+
+### WebSocket & MetaMask Connection Fixes (v1.0.1)
+
+**Fixed Issues:**
+- ✅ WebSocket HMR permission errors (port 443)
+- ✅ MetaMask disconnection on chain switch
+- ✅ Frontend server configuration for domain access
+- ✅ API proxy routing between frontend and backend
+
+**Changes Made:**
+1. **Vite HMR Configuration** (`client/vite.config.ts`)
+   - Changed from port 443 to localhost:3000
+   - Added API proxy configuration
+   - Improved development environment compatibility
+
+2. **MetaMask Connection Persistence** (`client/src/context/Web3Context.tsx`)
+   - Removed page reload on chain change
+   - Chain switches now graceful and seamless
+   - Connection persists across network changes
+
+3. **API Routing** (`client/src/hooks/useFHEEncryption.ts`)
+   - Updated to use proxied `/api` endpoints
+   - Works with Vite proxy in development
+   - Works with nginx/reverse proxy in production
+
+**Testing:**
+- ✅ WebSocket connections stable
+- ✅ MetaMask connection persists
+- ✅ Chain switching works without disconnection
+- ✅ All services operational
+
+### Running Current Version
+
+```bash
+# Latest code includes all fixes
+git clone https://github.com/aquariusluo/shadowmerchants.git
+cd shadowmerchants
+npm install
+npm run start-all
+```
+
+Then open `http://localhost:3000` and test:
+1. Connect MetaMask wallet
+2. Switch networks in MetaMask
+3. Connection should persist (no page reload)
+4. All features should work seamlessly
 
 ## Project Structure
 
 ```
-fhe-game/
+shadowmerchants/
 ├── contracts/
 │   ├── MarketAuction.sol          # Main auction contract (Gateway pattern)
 │   ├── ShadowMerchants.sol        # Game management contract
@@ -329,6 +482,49 @@ const MOCK_MODE = false;
 
 ## Troubleshooting
 
+### WebSocket & MetaMask Issues
+
+#### "MetaMask disconnects when switching networks"
+
+**Status**: ✅ FIXED (v1.0.1)
+
+**Old behavior**: Page would reload, losing connection
+**New behavior**: Connection persists seamlessly
+
+If you're still experiencing this:
+- Clear browser cache: `Ctrl+Shift+Delete`
+- Hard refresh page: `Ctrl+Shift+R`
+- Update to latest code: `git pull origin main`
+
+#### "WebSocket connection failed" or "permission denied 443"
+
+**Status**: ✅ FIXED (v1.0.1)
+
+**Fix**: HMR now uses `localhost:3000` instead of port 443
+
+Verify configuration in `client/vite.config.ts`:
+```typescript
+hmr: {
+  host: 'localhost',
+  port: 3000,
+  protocol: 'http',
+}
+```
+
+#### "Connection to backend failed"
+
+**Cause**: Backend server not running
+
+**Solution**:
+```bash
+cd server
+npm run server
+```
+
+Check health: `curl http://localhost:4000/health`
+
+### General Issues
+
 ### "Relayer didn't response correctly"
 
 **Cause**: Zama Relayer service is down
@@ -346,16 +542,6 @@ const MOCK_MODE = false;
 - Run deployment: `npx hardhat run scripts/deploy.ts --network sepolia`
 - Update addresses in `.env` and `client/.env.local`
 - Restart server and frontend
-
-### "Connection to backend failed"
-
-**Cause**: Backend server not running
-
-**Solution**:
-```bash
-cd server
-npx ts-node server.ts
-```
 
 ### "Insufficient funds"
 
